@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Analog Clock — Glow + Theme Switch</title>
+  <style>
+    :root{
+      --bg-dark:#0b0f14;
+      --bg-light:#f6f7f9;
+      --face-dark:#ffffff;
+      --face-light:#ffffff;
+      --num-dark:#000000;
+      --num-light:#111827;
+
+      --accent-on:#2ecc71; /* green */
+      --accent-off:#e74c3c; /* red */
+
+      --glow-color-dark: rgba(46, 204, 113, 0.18);
+      --glow-color-light: rgba(46, 204, 113, 0.25);
+    }
+
+    /* theme variables (default: dark) */
+    body[data-theme='dark']{
+      --bg:var(--bg-dark);
+      --face:var(--face-dark);
+      --numbers:var(--num-dark);
+      --glow:var(--glow-color-dark);
+    }
+    body[data-theme='light']{
+      --bg:var(--bg-light);
+      --face:var(--face-light);
+      --numbers:var(--num-light);
+      --glow:var(--glow-color-light);
+    }
+
+    html,body{height:100%;margin:0}
+    body{display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);padding:24px;font-family:Inter,system-ui,Arial;transition:background .25s ease}
+
+    /* container keeps clock responsive */
+    .container{width:min(520px, 80vmin);aspect-ratio:1;display:grid;place-items:center;position:relative}
+
+    /* glow effect: uses CSS variable for color */
+    .clock{width:100%;height:100%;background:transparent;display:block;position:relative;filter:none;border-radius:50%;transition:box-shadow .25s ease, transform .2s ease;box-shadow: 0 10px 40px rgba(0,0,0,0.6);}
+    .clock.glow{box-shadow: 0 0 40px 14px var(--glow), 0 12px 40px rgba(0,0,0,0.5); transform: translateZ(0);}
+
+    /* controls wrapper under the clock; button and time side-by-side */
+    .controls-wrap{margin-top:18px;display:flex;align-items:center;justify-content:center;gap:16px}
+    .controls{display:flex;align-items:center;gap:12px}
+
+    /* Small pill switch with icons inside (red/off, green/on) */
+    .switch{position:relative;display:inline-block;width:88px;height:40px}
+    .switch input{opacity:0;width:0;height:0;position:absolute}
+    .pill{
+      position:relative;width:100%;height:100%;border-radius:999px;background:var(--accent-off);border:3px solid rgba(0,0,0,0.12);display:flex;align-items:center;justify-content:space-between;padding:0 10px;box-sizing:border-box;overflow:hidden;transition:background .18s ease, border-color .18s ease;
+    }
+    .pill .icon{font-size:18px;user-select:none}
+    .knob{position:absolute;top:4px;left:4px;width:32px;height:32px;border-radius:50%;background:linear-gradient(180deg,#ffffff,#e6e6e6);box-shadow:0 6px 14px rgba(0,0,0,0.28);border:2px solid rgba(0,0,0,0.08);transition:left .22s cubic-bezier(.2,.9,.2,1)}
+    .switch input:checked + .pill{background:var(--accent-on)}
+    .switch input:checked + .pill .knob{left:calc(100% - 36px)}
+
+    /* theme toggle small circular button */
+    .theme-btn{width:40px;height:40px;border-radius:10px;display:inline-grid;place-items:center;border:0;background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.45);transition:background .18s ease, transform .12s ease}
+    .theme-btn:active{transform:scale(.98)}
+
+    /* digital time display (kept compact to the right of switch) */
+    .digital{min-width:130px;text-align:center;background:rgba(255,255,255,0.04);color:#fff;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,0.45);transition:background .18s ease,color .18s ease}
+
+    /* light theme tweaks (numbers/text color) */
+    body[data-theme='light'] .pill{border-color:rgba(0,0,0,0.06)}
+    body[data-theme='light'] .digital{background:rgba(0,0,0,0.04);color:#111}
+
+    @media (max-width:420px){ .switch{width:72px;height:34px} .knob{width:28px;height:28px;top:3px} .digital{min-width:100px;font-size:14px} }
+  </style>
+</head>
+<body data-theme="dark">
+  <div class="container">
+    <svg class="clock" id="svgClock" viewBox="0 0 520 520" role="img" aria-label="Analog clock">
+      <defs>
+        <filter id="innerShadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.18" />
+        </filter>
+      </defs>
+      <g transform="translate(260,260)">
+        <circle r="240" id="face" fill="var(--face)" stroke="#000000" stroke-width="14" />
+        <g id="minute-ticks"></g>
+        <g id="hour-ticks"></g>
+        <g id="numbers" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="34" fill="var(--numbers)"></g>
+        <g id="hands" stroke-linecap="round" stroke-linejoin="round">
+          <line id="hourHand" x1="0" y1="0" x2="0" y2="-100" stroke="#000" stroke-width="14" stroke-linecap="round" />
+          <line id="minuteHand" x1="0" y1="0" x2="0" y2="-125" stroke="#000" stroke-width="12" stroke-linecap="round" />
+          <line id="secondHand" x1="6" y1="8" x2="0" y2="-180" stroke="#000" stroke-width="2" />
+          <circle cx="0" cy="0" r="8" fill="#000" />
+          <circle cx="0" cy="0" r="4" fill="#fff" />
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <!-- controls under the clock (switch + digital time side-by-side) -->
+  <div class="controls-wrap">
+    <div class="controls">
+      <label class="switch" title="Toggle ticking sound">
+        <input id="soundToggle" type="checkbox" checked aria-checked="true">
+        <div class="pill" aria-hidden="true">
+          <span class="icon off">🔈</span>
+          <span class="icon on">🔊</span>
+          <div class="knob" aria-hidden="true"></div>
+        </div>
+      </label>
+      <div id="digital" class="digital" aria-live="polite">00:00:00 AM</div>
+    </div>
+    <button id="themeBtn" class="theme-btn" aria-pressed="false" title="Toggle theme">🌙</button>
+  </div>
+
+  <script>
+    (function(){
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const minuteTicks = document.getElementById('minute-ticks');
+      const hourTicks = document.getElementById('hour-ticks');
+      const numbersG = document.getElementById('numbers');
+
+      for(let i=0;i<60;i++){
+        const angle = i * 6 * Math.PI/180;
+        const isHour = i % 5 === 0;
+        const outerR = 220;
+        const innerR = isHour ? 185 : 200;
+        const x1 = Math.sin(angle) * innerR;
+        const y1 = -Math.cos(angle) * innerR;
+        const x2 = Math.sin(angle) * outerR;
+        const y2 = -Math.cos(angle) * outerR;
+        const line = document.createElementNS(svgNS,'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke','#000');
+        line.setAttribute('stroke-width', isHour ? 4 : 2);
+        if(isHour) hourTicks.appendChild(line); else minuteTicks.appendChild(line);
+      }
+
+      for(let n=1;n<=12;n++){
+        const angle = n * 30 * Math.PI/180;
+        const r = 150;
+        const x = Math.sin(angle) * r;
+        const y = -Math.cos(angle) * r + 10;
+        const txt = document.createElementNS(svgNS,'text');
+        txt.setAttribute('x', x);
+        txt.setAttribute('y', y);
+        txt.setAttribute('text-anchor','middle');
+        txt.setAttribute('dominant-baseline','middle');
+        txt.textContent = String(n);
+        numbersG.appendChild(txt);
+      }
+
+      const hourHand = document.getElementById('hourHand');
+      const minuteHand = document.getElementById('minuteHand');
+      const secondHand = document.getElementById('secondHand');
+      const digital = document.getElementById('digital');
+      const svgClock = document.getElementById('svgClock');
+
+      // single declaration of the toggle control
+      const soundToggle = document.getElementById('soundToggle');
+      let soundEnabled = soundToggle.checked;
+
+      const themeBtn = document.getElementById('themeBtn');
+      const body = document.body;
+
+      let audioCtx = null;
+      let clockStarted = false;
+      let tickInterval = null;
+
+      function initAudio(){ if(audioCtx) return; try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ audioCtx = null; }}
+
+      function playTick(){
+        if(!audioCtx || !soundEnabled) return;
+        const now = audioCtx.currentTime;
+        const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.03, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1);
+        const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter(); filter.type="bandpass"; filter.frequency.value=2500; filter.Q.value=10;
+        const gain = audioCtx.createGain();
+        // very loud as requested — user asked for high level sound (careful on headphones)
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(3.0, now + 0.002);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+        noise.connect(filter).connect(gain).connect(audioCtx.destination);
+        noise.start(now);
+        noise.stop(now + 0.09);
+      }
+
+      function setRotation(el, deg){ el.setAttribute('transform', `rotate(${deg})`); }
+
+      function formatDigital(now){
+        let h = now.getHours();
+        const m = now.getMinutes();
+        const s = now.getSeconds();
+        const am = h >= 12 ? 'PM' : 'AM';
+        h = h % 12; if(h === 0) h = 12;
+        const hh = String(h).padStart(2,'0');
+        const mm = String(m).padStart(2,'0');
+        const ss = String(s).padStart(2,'0');
+        return `${hh}:${mm}:${ss} ${am}`;
+      }
+
+      function updateGlow(){
+        // toggle glow class based on theme
+        if(body.getAttribute('data-theme') === 'dark') svgClock.classList.add('glow');
+        else svgClock.classList.remove('glow');
+      }
+
+      function tick(){
+        const now = new Date();
+        const s = now.getSeconds();
+        const m = now.getMinutes();
+        const h = now.getHours()%12;
+        setRotation(secondHand, s * 6);
+        setRotation(minuteHand, (m + s/60) * 6);
+        setRotation(hourHand, (h + (m + s/60)/60) * 30);
+        if(audioCtx && audioCtx.state === 'suspended' && soundEnabled) audioCtx.resume().catch(()=>{});
+        if(audioCtx && soundEnabled) playTick();
+        // update digital display
+        if(digital) digital.textContent = formatDigital(now);
+      }
+
+      function startClock(){
+        if(clockStarted) return; // ensure we don't start multiple intervals
+        clockStarted = true;
+        const now = new Date();
+        const s = now.getSeconds();
+        const m = now.getMinutes();
+        const h = now.getHours()%12;
+        setRotation(secondHand, s * 6);
+        setRotation(minuteHand, (m + s/60) * 6);
+        setRotation(hourHand, (h + (m + s/60)/60) * 30);
+        if(digital) digital.textContent = formatDigital(now);
+        const delay = 1000 - now.getMilliseconds();
+        setTimeout(()=>{ tick(); tickInterval = setInterval(tick, 1000); }, delay);
+      }
+
+      // wire toggle without restarting clock
+      soundToggle.addEventListener('change', ()=>{
+        soundEnabled = soundToggle.checked;
+        soundToggle.setAttribute('aria-checked', String(soundEnabled));
+        if(soundEnabled){ initAudio(); if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{}); }
+        else{ if(audioCtx && audioCtx.state === 'running') audioCtx.suspend().catch(()=>{}); }
+      });
+
+      // theme button
+      function setTheme(theme){ body.setAttribute('data-theme', theme); themeBtn.setAttribute('aria-pressed', String(theme==='dark')); themeBtn.textContent = theme==='dark' ? '🌙' : '☀️'; updateGlow(); }
+      themeBtn.addEventListener('click', ()=>{ const next = body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; setTheme(next); localStorage.setItem('clockTheme', next); });
+
+      // initialize theme from storage
+      const saved = localStorage.getItem('clockTheme'); if(saved) setTheme(saved); else setTheme('dark');
+
+      // start clock once after user gesture (or fallback) — ensure startClock is idempotent
+      function userStart(){ initAudio(); if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{}); startClock(); document.removeEventListener('pointerdown', userStart); document.removeEventListener('keydown', userStart); }
+      document.addEventListener('pointerdown', userStart);
+      document.addEventListener('keydown', userStart);
+      // fallback safe start (no audio) after 1s, still won't duplicate
+      setTimeout(()=>{ startClock(); }, 1000);
+
+      // expose for debugging
+      window._startClock = startClock;
+      window._stopClock = function(){ if(tickInterval) clearInterval(tickInterval); clockStarted=false; };
+
+    })();
+  </script>
+</body>
+</html>
